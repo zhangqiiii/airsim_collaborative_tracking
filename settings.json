@@ -1,0 +1,74 @@
+{
+    "SimMode": "Multirotor",
+    "SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/master/docs/settings.md",
+    "SettingsVersion": 1.6,
+    "SubWindows": [  
+        {"WindowID": 0, "CameraName": "high_res", "ImageType": 5, "VehicleName": "Drone1", "Visible": false},    
+        {"WindowID": 1, "CameraName": "high_res", "ImageType": 3, "VehicleName": "Drone1", "Visible": false},
+        {"WindowID": 2, "CameraName": "high_res", "ImageType": 0, "VehicleName": "Drone1", "Visible": false}
+    ],
+    "Vehicles": {
+        "Drone1": {
+            "VehicleType": "SimpleFlight",
+            "AutoCreate": true,
+            "Sensors": {
+                "DisF": {
+                    "SensorType": 5,
+                    "Enabled" : true,
+                    "X": 0, "Y": 0, "Z": -1,
+                    "Yaw": 0, "Pitch": 0, "Roll": 0
+                },
+                "DisB": {
+                    "SensorType": 5,
+                    "Enabled" : true,
+                    "X": 0, "Y": 0, "Z": -1,
+                    "Yaw": 180, "Pitch": 0, "Roll": 0
+                },
+                "DisL": {
+                    "SensorType": 5,
+                    "Enabled" : true,
+                    "X": 0, "Y": 0, "Z": -1,
+                    "Yaw": -90, "Pitch": 0, "Roll": 0
+                },
+                "DisR": {
+                    "SensorType": 5,
+                    "Enabled" : true,
+                    "X": 0, "Y": 0, "Z": -1,
+                    "Yaw": 90, "Pitch": 0, "Roll": 0
+                }
+            },
+	        "Cameras" : {
+                "high_res": {
+                    "CaptureSettings" : [
+                        {
+                            "ImageType" : 0,
+                            "Width" : 600,
+                            "Height" : 400
+                        }
+                    ],
+                    "X": 0.50, "Y": 0.00, "Z": 0.10,
+                    "Pitch": -45.0, "Roll": 0.0, "Yaw": 0.0
+                },
+                "low_res": {
+                    "CaptureSettings" : [
+                        {
+                            "ImageType" : 0,
+                            "Width" : 256,
+                            "Height" : 144
+                        }
+                    ],
+                    "X": 0.50, "Y": 0.00, "Z": 0.10,
+                    "Pitch": 0.0, "Roll": 0.0, "Yaw": 0.0
+                }
+            },
+            "X": 0, "Y": 0, "Z": -2
+        },
+
+
+        "Drone2": {
+          "VehicleType": "SimpleFlight",
+          "AutoCreate": true,
+          "X": 0, "Y": 2, "Z": -2
+        }
+    }
+}
