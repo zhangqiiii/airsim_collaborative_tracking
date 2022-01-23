@@ -7,6 +7,8 @@ import airsim
 import math
 import time
 
+camera_name = "high_res"
+
 
 class flying(threading.Thread):  # 继承父类threading.Thread
     def __init__(self, name, client_: airsim.MultirotorClient):
@@ -61,19 +63,32 @@ client.armDisarm(True)
 client.takeoffAsync().join()
 
 client.moveToZAsync(-20, 5).join()
-client.rotateToYawAsync(90).join()
-client.moveToPositionAsync(10, 10, -20, 2)
-time.sleep(2)
-drone_state = client.getMultirotorState()
-print(drone_state.kinematics_estimated.position)
-client.moveToPositionAsync(10, 50, -20, 2)
 
-drone_state = client.getMultirotorState()
-print(drone_state.kinematics_estimated.position)
-time.sleep(20)
+# dt = airsim.DrivetrainType.ForwardOnly
+dt = airsim.DrivetrainType.MaxDegreeOfFreedom
+yawmode = airsim.YawMode(is_rate=False, yaw_or_rate=0)
+client.moveToPositionAsync(40, 40, -20, 5, 300,
+                           drivetrain=dt, yaw_mode=yawmode,
+                           lookahead=1, adaptive_lookahead=-1).join()
+# print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
+# client.rotateToYawAsync(90).join()
+# print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
+# client.rotateToYawAsync(30).join()
+# print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
 
-drone_state = client.getMultirotorState()
-print(drone_state.kinematics_estimated.position)
+# client.simSetCameraPose(camera_name, airsim.Pose(orientation_val=airsim.to_quaternion(-1,0,0)))
+# client.moveToPositionAsync(10, 10, -20, 2)
+# time.sleep(2)
+# drone_state = client.getMultirotorState()
+# print(drone_state.kinematics_estimated.position)
+# client.moveToPositionAsync(10, 50, -20, 2)
+#
+# drone_state = client.getMultirotorState()
+# print(drone_state.kinematics_estimated.position)
+# time.sleep(20)
+
+# drone_state = client.getMultirotorState()
+# print(drone_state.kinematics_estimated.position)
 
 # 创建新线程
 # thread1 = flying("Thread-1", client)
@@ -85,8 +100,8 @@ print(drone_state.kinematics_estimated.position)
 
 # f = client.goHomeAsync()
 # client.goHomeAsync().join()
-print("landing")
-client.landAsync().join()
+# print("landing")
+# client.landAsync().join()
 
 # lock
 print("locking")
