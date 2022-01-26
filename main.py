@@ -65,11 +65,16 @@ client.takeoffAsync().join()
 client.moveToZAsync(-20, 5).join()
 
 # dt = airsim.DrivetrainType.ForwardOnly
-dt = airsim.DrivetrainType.MaxDegreeOfFreedom
+dt = airsim.DrivetrainType.ForwardOnly
 yawmode = airsim.YawMode(is_rate=False, yaw_or_rate=0)
-client.moveToPositionAsync(40, 40, -20, 5, 300,
-                           drivetrain=dt, yaw_mode=yawmode,
-                           lookahead=1, adaptive_lookahead=-1).join()
+# client.moveToPositionAsync(40, 40, -20, 5, 300,
+#                            drivetrain=dt, yaw_mode=yawmode,
+#                            lookahead=1, adaptive_lookahead=-1).join()
+
+client.rotateToYawAsync(60).join()
+client.moveByVelocityAsync(5, 0, 0, 15,
+                           drivetrain=dt,
+                           yaw_mode=yawmode).join()
 # print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
 # client.rotateToYawAsync(90).join()
 # print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))

@@ -6,6 +6,6 @@ camera_name = "high_res"
 pi = math.pi
 camera_width = 600
 camera_height = 400
-max_speed = 5
+max_speed = 4
 
 image_type = airsim.ImageType.Scene
