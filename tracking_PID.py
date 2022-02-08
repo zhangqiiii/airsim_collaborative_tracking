@@ -8,6 +8,7 @@ import time
 from param_setting import *
 from PIDcontroller import PIDController
 
+vehicle_name = "Drone1"
 
 def rotate_2vector(theta, vec):
     """
