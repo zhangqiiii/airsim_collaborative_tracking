@@ -15,24 +15,24 @@ client.enableApiControl(True, "Drone1")
 # client.enableApiControl(True, "Drone2")
 
 state = client.getMultirotorState()
-s = pprint.pformat(state)
-print("state: %s" % s)
-
-imu_data = client.getImuData()
-s = pprint.pformat(imu_data)
-print("imu_data: %s" % s)
-
-barometer_data = client.getBarometerData()
-s = pprint.pformat(barometer_data)
-print("barometer_data: %s" % s)
-
-magnetometer_data = client.getMagnetometerData()
-s = pprint.pformat(magnetometer_data)
-print("magnetometer_data: %s" % s)
-
-gps_data = client.getGpsData()
-s = pprint.pformat(gps_data)
-print("gps_data: %s" % s)
+# s = pprint.pformat(state)
+# print("state: %s" % s)
+#
+# imu_data = client.getImuData()
+# s = pprint.pformat(imu_data)
+# print("imu_data: %s" % s)
+#
+# barometer_data = client.getBarometerData()
+# s = pprint.pformat(barometer_data)
+# print("barometer_data: %s" % s)
+#
+# magnetometer_data = client.getMagnetometerData()
+# s = pprint.pformat(magnetometer_data)
+# print("magnetometer_data: %s" % s)
+#
+# gps_data = client.getGpsData()
+# s = pprint.pformat(gps_data)
+# print("gps_data: %s" % s)
 
 # airsim.wait_key('Press any key to takeoff')
 print("Taking off...")
@@ -46,14 +46,21 @@ print("state: %s" % pprint.pformat(state))
 # client.moveToPositionAsync(-10, 10, -10, 5).join()
 client.moveToZAsync(-15, 4).join()
 client.rotateToYawAsync(60).join()
-client.moveByVelocityAsync(5, 0, 0, 10).join()
+# client.moveByVelocityAsync(5, 0, 0, 10).join()
 client.rotateToYawAsync(-60).join()
-while True:
-    print("ww")
-    client.moveByVelocityAsync(-5, 0, 0, 2,
-                               yaw_mode=airsim.YawMode(False, 30)).join()
+# while True:
+#     print("ww")
+#     client.moveByVelocityAsync(-5, 0, 0, 2,
+#                                yaw_mode=airsim.YawMode(False, 30)).join()
 
+print("move to 20 0 0")
+res = client.moveToPositionAsync(-10, 0, -10, 5).join()
+# while True:
+#     print(res.future)
+# print(res.result)
+print("end")
 client.hoverAsync().join()
+
 
 state = client.getMultirotorState()
 print("state: %s" % pprint.pformat(state))

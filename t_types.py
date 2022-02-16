@@ -1,6 +1,6 @@
 import threading
-
 import airsim
+from airsim import Vector3r, Vector2r
 
 
 class MType:
@@ -13,6 +13,7 @@ class MType:
     """
     GET_STATE = 1
     TRACK_TARGET = 2
+    SEARCH_TARGET = 3
 
 
 class Message:

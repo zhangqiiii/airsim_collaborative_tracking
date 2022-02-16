@@ -75,6 +75,14 @@ client.rotateToYawAsync(60).join()
 client.moveByVelocityAsync(5, 0, 0, 15,
                            drivetrain=dt,
                            yaw_mode=yawmode).join()
+print("move to 20 0 0")
+res = client.moveToZAsync(-20, 5)
+while True:
+    if res.result is not None:
+        print(res.result)
+# print(res.result)
+print("end")
+
 # print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
 # client.rotateToYawAsync(90).join()
 # print(airsim.to_eularian_angles(client.simGetCameraInfo(camera_name).pose.orientation))
