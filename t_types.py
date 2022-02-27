@@ -1,3 +1,4 @@
+import math
 import threading
 import airsim
 from airsim import Vector3r, Vector2r
@@ -93,3 +94,40 @@ class Area:
         self.p3 = p3
         self.p4 = p4
 
+
+class TargetInfo:
+    """
+    传给其他无人机的目标信息
+    """
+    def __init__(self, position: Vector2r, orientation: Vector2r, speed):
+        """
+        最后时刻无人机的估计位置和运动方向、速度
+        """
+        self.position = position
+        self.orientation = orientation
+        self.speed = speed
+
+
+class historyData:
+    def __init__(self, num):
+        self.num = num
+        self.data = []
+
+    def update(self, data):
+        if len(self.data) < self.num:
+            self.data.append(data)
+        else:
+            self.data.append(data)
+            self.data.pop(0)
+
+    def is_stable(self, thr=0.05):
+        """
+        判断一组状态是否稳定
+        """
+        if len(self.data) == self.num:
+            mean = sum(self.data)/self.num
+            for i in self.data:
+                if math.fabs(i - mean) > thr:
+                    return False
+            return True
+        return False

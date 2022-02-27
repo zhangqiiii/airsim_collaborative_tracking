@@ -93,7 +93,7 @@ def main():
     else:
         print("Closing to target")
         # 分别创建两个 PID 来控制 偏航 和 前向速度
-        speed_ctrl = PIDController(0.001, 0.01, 0.01, 8)
+        speed_ctrl = PIDController(0.001, 0.01, 0.01, 15)
         yaw_ctrl = PIDController(0.08, 0.01, 0.05, math.radians(8))
         while True:
             objs = client.simGetDetections(camera_name, image_type)
@@ -109,8 +109,8 @@ def main():
 
             # 偏航增量
             yaw_add = yaw_ctrl.getOutput(pi / 2 - cur_yaw)
-            print("无人机偏航" + str(math.degrees(angle[2])))
-            print("偏航 " + str(math.degrees(yaw_add)))
+            # print("无人机偏航" + str(math.degrees(angle[2])))
+            # print("偏航 " + str(math.degrees(yaw_add)))
 
             cur_speed = speed_ctrl.getOutput(res[2])
             vy = cur_speed * math.sin(cur_yaw)

@@ -12,8 +12,12 @@ class PIDController:
         self.kI = kI
         self.kD = kD
         self.max_out = max_out
-        self.P = self.I = self.D = 0
-        self.prev_err = self.last_err = self.cur_err = 0
+        self.P = 0
+        self.I = 0
+        self.D = 0
+        self.prev_err = 0
+        self.last_err = 0
+        self.cur_err = 0
         # self.last_PID_out = 0
 
     def getOutput(self, curerr):
