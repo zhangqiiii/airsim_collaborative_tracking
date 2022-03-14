@@ -7,6 +7,9 @@ import airsim
 import math
 import time
 
+from t_util import droneLidar
+from tracking_PID import vehicle_name
+
 camera_name = "high_res"
 
 
@@ -72,10 +75,23 @@ client.takeoffAsync().join()
 # client__ = airsim.MultirotorClient()
 # t2 = print_state("fff", client__)
 # t2.start()
-from t_util import moveToPositionWithLidar
+# from t_util import moveToPositionWithLidar
+#
+# moveToPositionWithLidar(client, 8, -40, -10, 5, "Drone1")
+lidar_ctrl = droneLidar(client, vehicle_name)
+yaw = 0
+# client.moveToPositionAsync(0, 10, -2, 2)
+# f = open("./test_sensing", "w")
+for i in range(100):
+    # client.rotateToYawAsync(yaw)
+    # yaw += 15
+    time.sleep(0.1)
+    a = lidar_ctrl.sensing()
 
-moveToPositionWithLidar(client, 8, -40, -10, 3, "Drone1")
-
+# current_height = 5.0
+# while True:
+#     client.moveByVelocityZAsync(2, 2, -current_height, 4).join()
+#     current_height += 2.0
 
 # # dt = airsim.DrivetrainType.ForwardOnly
 # dt = airsim.DrivetrainType.ForwardOnly

@@ -1,19 +1,17 @@
-import time
-
-import airsim
-
+import multiprocessing
 from t_task import *
 
 
-class DroneControl(threading.Thread):
+class DroneControl:
     """
     单个无人机的控制
     """
-
-    def __init__(self, vehicle_name, client: airsim.MultirotorClient, area: Area, init_pos):
-        threading.Thread.__init__(self)
+    def __init__(self, vehicle_name, area: Area, init_pos):
+        # threading.Thread.__init__(self)
         self.vehicle_name = vehicle_name
-        self.client = client
+        self.client = None
+        self.message_queue = None
+        self.index = int(self.vehicle_name[-1]) - 1
         self.message = None
         self.area = area
         self.init_pos = tuple_to_vector3r(init_pos)
@@ -26,10 +24,17 @@ class DroneControl(threading.Thread):
         """为了防止冲突，这里单独新建一个 client, self.client 用于任务执行，任务执行是串行的"""
         self.tmp_client = None
 
-    def send_message(self, message):
-        self.message = message
+    # def send_message(self, message):
+    #     self.message = message
 
-    def run(self):
+    def run(self, message_queue):
+        # 一些类变量赋值
+        self.message_queue = message_queue
+        # 这个对象无法序列化到子进程，所以内部创建
+        self.client = airsim.MultirotorClient()
+        self.client.confirmConnection()
+        self.client.enableApiControl(True, self.vehicle_name)
+
         camera_pose = airsim.Pose(position_val=airsim.Vector3r(0.5, 0.0, 0.1),
                                   orientation_val=airsim.to_quaternion(-pi / 4., 0, 0))
         self.client.simSetCameraPose(camera_name, camera_pose, self.vehicle_name)
@@ -43,7 +48,6 @@ class DroneControl(threading.Thread):
             # 判断任务的执行情况
             if self.current_task is not None:
                 self.task_exec_state()
-            # time.sleep(0.1)
 
     def stop(self):
         self.stop_flag = True
@@ -65,7 +69,13 @@ class DroneControl(threading.Thread):
         self.task_state = task.task_num
 
     def listen_message(self):
-        if self.last_message != self.message:
+        q: multiprocessing.Queue = self.message_queue[self.index]
+        if q.empty():
+            self.message = None
+        else:
+            self.message: Message = q.get()
+        # print(self.index, q.qsize())
+        if self.last_message != self.message and self.message is not None:
             self.last_message = self.message
             # 解析消息
             if self.message.m_type == MType.GET_STATE:
@@ -129,40 +139,30 @@ class DroneControl(threading.Thread):
                     self.switch_current_task(current_task)
                     # 广播
                     self.drone_state = self.tmp_client.getMultirotorState(self.vehicle_name)
-                    track_task = Message(MType.TRACK_TARGET, threading.current_thread())
-                    for drone_ in drone_list:
-                        if drone_ != threading.current_thread():
+                    track_task = Message(MType.TRACK_TARGET, -1, self.index)
+                    for drone_index in range(len(self.message_queue)):
+                        if drone_index != self.index:
                             # data 已经是世界坐标，不需要再进行转换
                             track_task.set_req_data(data)
-                            drone_.send_message(track_task)
+                            self.message_queue[drone_index].put(track_task)
+                            print("已发送给", drone_index)
 
         else:
             pass
 
 
 if __name__ == "__main__":
-    position_PID_gains = airsim.PositionControllerGains(airsim.PIDGains(0.25, 0.1, 0.1),
-                                                        airsim.PIDGains(0.25, 0.1, 0.1),
-                                                        airsim.PIDGains(0.25, 0.1, 0.1))
-    angle_PID_gains = airsim.AngleRateControllerGains(airsim.PIDGains(0.25, 0.01, -0.01),
-                                                      airsim.PIDGains(0.25, 0.01, -0.01),
-                                                      airsim.PIDGains(0.25, 0.01, -0.01))
-    velocityPID = airsim.VelocityControllerGains(airsim.PIDGains(0.1, 0.01, 0.1),
-                                                 airsim.PIDGains(0.1, 0.01, 0.1),
-                                                 airsim.PIDGains(2.0, 2.0, 0))
     vehicle_name_list = ["Drone1", "Drone2"]
     client_list = [None, None]
     drone_list = [None, None]
 
+    q_message = [multiprocessing.Queue(1), multiprocessing.Queue(1)]
+
     for i in range(2):
-        client_list[i] = airsim.MultirotorClient()
-        client_list[i].confirmConnection()
-        # client_list[i].setAngleRateControllerGains(angle_PID_gains, vehicle_name_list[i])
-        # client_list[i].setVelocityControllerGains(velocityPID, vehicle_name_list[i])
-        client_list[i].enableApiControl(True, vehicle_name_list[i])
-        drone_list[i] = DroneControl(vehicle_name_list[i], client_list[i],
-                                     list_to_area(all_area[i]), init_position[i])
+        drone = DroneControl(vehicle_name_list[i], list_to_area(all_area[i]), init_position[i])
+        drone_list[i] = multiprocessing.Process(target=drone.run, name=str(i), args=(q_message,))
         drone_list[i].start()
         print(vehicle_name_list[i], " start")
-    begin_task = Message(3, drone_list[0])
-    drone_list[0].send_message(begin_task)
+    begin_task = Message(3, 0, -1)
+    # begin_task = classToDict(begin_task)
+    q_message[0].put(begin_task)

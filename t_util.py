@@ -1,15 +1,10 @@
 import inspect
 import ctypes
-import pprint
-
-import airsim
+from airsim import Vector2r
 import cv2
 import numpy as np
 import time
-
 from typing import List
-
-from PIDcontroller import PIDController
 from t_types import *
 # 导入全局参数
 from param_setting import *
@@ -32,10 +27,11 @@ def rotate_2vector(theta, vec):
     return new_vec[0, 0], new_vec[1, 0]
 
 
-def det_coord(objs):
+def det_coord(objs, current_height):
     """
     返回目标的检测结果
     :param objs: simGetDetections的检测结果
+    :param current_height: 当前的高度
     :return: 5个值, 方向向量x, y, 模长, 图像位置的坐标x, y
     """
     obj = objs[0]
@@ -51,26 +47,23 @@ def det_coord(objs):
     return v_dir_x, v_dir_y, norm, int(center_x), int(center_y)
 
 
-def get_2d_gaussian_model():
-    """
-    返回一个二维高斯核，用来调节在不同视野位置下无人机的速度
-    :return: 返回值是速度的权重图，一次计算，重复使用
-    """
-    upsample = 12
-    h_sigma = 6
-    w_sigma = h_sigma * camera_width / camera_height
-    row = cv2.getGaussianKernel(int(camera_height / upsample), h_sigma)
-    col = cv2.getGaussianKernel(int(camera_width / upsample), int(w_sigma)).T
-    model = row * col
-    max_value = np.max(model)
-    model = model / max_value
-    model = cv2.resize(model, (camera_width, camera_height))
-    # cv2.imshow("e", model)
-    # cv2.waitKey()
-    return 1 - model
-
-
-from airsim import Vector2r
+# def get_2d_gaussian_model():
+#     """
+#     返回一个二维高斯核，用来调节在不同视野位置下无人机的速度
+#     :return: 返回值是速度的权重图，一次计算，重复使用
+#     """
+#     upsample = 12
+#     h_sigma = 6
+#     w_sigma = h_sigma * camera_width / camera_height
+#     row = cv2.getGaussianKernel(int(camera_height / upsample), h_sigma)
+#     col = cv2.getGaussianKernel(int(camera_width / upsample), int(w_sigma)).T
+#     model = row * col
+#     max_value = np.max(model)
+#     model = model / max_value
+#     model = cv2.resize(model, (camera_width, camera_height))
+#     # cv2.imshow("e", model)
+#     # cv2.waitKey()
+#     return 1 - model
 
 
 def in_area(position: Vector3r, area: Area, error=1e-3):
@@ -266,15 +259,17 @@ def moveToPositionWithLidar(client: airsim.MultirotorClient, x, y, z, velocity, 
 
         res = lidar_ctrl.sensing()
         # print(res)
-        if res == 1:
+        if res == voidObstacleAction.WARN:
             client.moveToPositionAsync(x, y, z - line_dist, velocity, vehicle_name=vehicle_name)
-        elif res == 2:
-            client.cancelLastTask(vehicle_name)
+        elif res == voidObstacleAction.DANGER:
             client.moveToZAsync(drone_state.kinematics_estimated.position.z_val - g_danger_add_height,
                                 velocity, vehicle_name=vehicle_name)
+        elif res == voidObstacleAction.KEEP:
+            client.moveToPositionAsync(x, y, drone_state.kinematics_estimated.position.z_val,
+                                       velocity, vehicle_name=vehicle_name)
         else:
             client.moveToPositionAsync(x, y, z, velocity, vehicle_name=vehicle_name)
-
+    client.hoverAsync(vehicle_name=vehicle_name)
     print("arrive")
 
 
@@ -306,59 +301,76 @@ def stop_thread(thread: threading.Thread):
 """---------------------------------------------------avoid obstacle-------------------------------------------------"""
 
 
-class lidar_tmp_data:
+class lidarTmpData:
     """
     存储激光雷达的之前的若干（三组）数据，判断障碍物
     """
 
-    def __init__(self, name):
+    def __init__(self, name, bottom=False):
         self.name = name
-        self.pre = None
-        self.last = None
-        self.now = None
+        self.bottom = bottom
+        # self.pre = None
+        self.last = float("inf")
+        self.now = float("inf")
 
     def update(self, new_data):
-        self.pre = self.last
+        # self.pre = self.last
         self.last = self.now
-        self.now = np.linalg.norm(np.array(new_data)) if new_data else new_data
-        print(self.name, self.pre, self.last, self.now)
+        self.now = new_data if new_data is not None else float("inf")
+        # print(self.name, self.last, self.now)
 
     def is_obstacle(self):
         """
         判断是否正在靠近障碍物
-        :return: 1 表示正在靠近，采取在移动的过程中升高高度的策略；
-                 2 表示十分靠近了，必须停下当前的移动指令，进行升高操作
+        :return: 2 表示正在靠近，采取在移动的过程中升高高度的策略；
+                 3 表示十分靠近了，必须停下当前的移动指令，进行升高操作
+                 1 表示不要下降
                  0 表示没有靠近障碍或者没有障碍
         """
-        if self.pre is None or self.last is None or self.now is None:
-            return 0
-        if g_warn_dist >= self.pre >= self.last >= self.now:
-            if self.now > g_danger_dist:
-                return 1
+        if self.bottom:
+            if self.now < g_danger_dist:
+                return voidObstacleAction.KEEP
             else:
-                return 2
+                return voidObstacleAction.NO
+        if self.last == float("inf") and self.now == float("inf"):
+            return voidObstacleAction.NO
+        if self.now <= self.last <= g_warn_dist:
+            if self.now > g_danger_dist:
+                return voidObstacleAction.WARN
+            else:
+                return voidObstacleAction.DANGER
         else:
-            return 0
+            return voidObstacleAction.NO
 
 
 class droneLidar:
+    """
+    激光雷达控制器，用来检测障碍
+    """
+
     def __init__(self, client, vehicle_name):
         self.client = client
         self.vehicle_name = vehicle_name
-        self.name = ["F", "B", "L", "R"]
+        # 一个检测四周，一个检测下面
+        self.name = ["F", "B"]
         self.lidar = []
         for i in self.name:
-            self.lidar.append(lidar_tmp_data(i))
+            self.lidar.append(lidarTmpData(i, True if i == "B" else False))
 
     def sensing(self):
         res = 0
         for lidar in self.lidar:
+            dist_list = []
             lidar_data = self.client.getLidarData("Lidar" + lidar.name, self.vehicle_name)
             tmp = lidar_data.point_cloud
-            if len(tmp) == 0:
+            if len(tmp) > 3:
+                for i in range(0, len(tmp), 3):
+                    dist_list.append(np.linalg.norm((tmp[i], tmp[i + 1], tmp[i + 2])))
+
+            if len(dist_list) == 0:
                 lidar.update(None)
             else:
-                lidar.update((tmp[0], tmp[1], tmp[2]))
+                lidar.update(min(dist_list))
             # 选择有风险事件
             res = max(res, lidar.is_obstacle())
         return res
