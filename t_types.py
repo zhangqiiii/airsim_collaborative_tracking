@@ -1,3 +1,4 @@
+import math
 import threading
 import airsim
 from airsim import Vector3r, Vector2r
@@ -20,13 +21,13 @@ class Message:
     """
     消息类，用于封装线程间通信信息
     """
-    def __init__(self, m_type: int, target: threading.Thread):
+    def __init__(self, m_type: int, target: int, source: int):
         """
         :param m_type: 消息类型，从 1 开始
         :param target: 消息的发送目标
         """
         self.m_type = m_type
-        self.source = threading.current_thread()
+        self.source = source
         self.target = target
         # 附加数据，可选项，没有固定类型，一般情况下都是对象的引用
         self.req_data = None
@@ -92,4 +93,53 @@ class Area:
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
+
+
+class TargetInfo:
+    """
+    传给其他无人机的目标信息
+    """
+    def __init__(self, position: Vector2r, orientation: Vector2r, speed):
+        """
+        最后时刻无人机的估计位置和运动方向、速度
+        """
+        self.position = position
+        self.orientation = orientation
+        self.speed = speed
+
+
+class voidObstacleAction:
+    """
+    避障的行动
+    """
+    NO = 0
+    KEEP = 1
+    WARN = 2
+    DANGER = 3
+
+
+
+class historyData:
+    def __init__(self, num):
+        self.num = num
+        self.data = []
+
+    def update(self, data):
+        if len(self.data) < self.num:
+            self.data.append(data)
+        else:
+            self.data.append(data)
+            self.data.pop(0)
+
+    def is_stable(self, thr=0.05):
+        """
+        判断一组状态是否稳定
+        """
+        if len(self.data) == self.num:
+            mean = sum(self.data)/self.num
+            for i in self.data:
+                if math.fabs(i - mean) > thr:
+                    return False
+            return True
+        return False
 
